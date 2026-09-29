@@ -1,0 +1,4 @@
+medium,corr_with_pink_seed33
+pink p=1.5 (seed 33),1.0
+exponential a=15 m (seed 33),0.955906108782028
+Gaussian a=50 m (seed 33),0.604547791708869

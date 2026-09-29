@@ -1,0 +1,17 @@
+# Large simulation output (strain Green's tensors, ~75 MB per model) - regenerate with run_sgt / run_sgt_hf
+sgt/
+sgt_hf/
+# Extracted FORGE waveforms and derived binaries (public release of the 56-32 SEG-2 records not yet confirmed)
+data/
+# Large intermediate results (features, comparisons); the CSV tables used by the manuscript are kept
+results/*.mat
+# Run logs
+logs/
+# Editor / OS / Office temporary files
+*.asv
+*.m~
+~$*
+Thumbs.db
+__pycache__/
+# superseded manuscript builders
+manuscript/*_backup.py

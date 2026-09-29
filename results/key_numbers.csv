@@ -1,0 +1,17 @@
+key,value
+n_events_box,555
+sensorA_depth_m,2179.46684435191
+sensorB_depth_m,2522.49807712259
+sensor_E_m,833.38371182219
+sensor_N_m,-5.92055022887
+vp_m_s,5808.29957051159
+log_sig6,0.0447295447875876
+log_sig50,0.0323249713369134
+log_beta,1.54035602049538
+nx,113
+ny,137
+nz,149
+dx_m,5
+dt_s,0.00025
+nt,1300
+f0_Hz,45

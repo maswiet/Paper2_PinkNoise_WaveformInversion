@@ -1,0 +1,4 @@
+Row,sel_pink,sel_exponential,sel_Gaussian
+true_pink,2,1,0
+true_exponential,2,1,0
+true_Gaussian,1,0,2

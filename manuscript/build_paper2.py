@@ -56,6 +56,9 @@ ccb = lambda s, m, c: CCB[(CCB.sensor == s) & (CCB.measure == m)][c].iloc[0]
 cmo = lambda s, f, c: CMO[(CMO.sensor == s) & (CMO.fc_Hz == f)][c].iloc[0]
 qs_fam = lambda fam: QS[QS.family == fam].slope_25_50
 qs_d = QS[QS.model == "data"].iloc[0]
+BT = rd("table_break_test.csv").set_index("model")
+bt = lambda m, c: BT.loc[m, c]
+btx = BT[BT.index.str.startswith("EX")]                      # exponential correlation-length series
 fam_spread = (CF[["score_pink", "score_exponential", "score_Gaussian"]].max(axis=1)
               - CF[["score_pink", "score_exponential", "score_Gaussian"]].min(axis=1))
 TITLE = ("Utah FORGE microearthquake waveforms reject smooth crustal models: 3-D elastic tests of a pink-noise "
@@ -105,12 +108,15 @@ d.p(f"Well logs, cores and flow data from sedimentary, crystalline and volcanic 
     f"Gaussian media (≥ {lv('Gaussian a=15 m'):.1f}). The 4-kHz downhole records are broadband: the S wave "
     f"exceeds noise by a factor of three up to about 1.8 kHz, far above the 100-Hz Nyquist frequency of 200-sample/s "
     f"recording. Over the resonance-free band 25–200 Hz, the single-scattering coda attenuation follows one power law, "
-    f"Q_{{c}}^{{-1}} ∝ *f*^{{{ccb('A','QI','slope'):.2f}}} (sensor A) and *f*^{{{ccb('B','QI','slope'):.2f}}} (sensor B), "
-    f"with no characteristic frequency. Its 25–50 Hz slope ({qs_d.slope_25_50:.2f}) is reproduced by pink and "
-    f"exponential media ({qs_fam('pink s=.09-.18').min():.2f} to {qs_fam('pink s=.09-.18').max():.2f} and "
-    f"{qs_fam('exponential a=15').min():.2f} to {qs_fam('exponential a=15').max():.2f}), but not by smooth crusts "
-    f"({qs_fam('smooth').min():.2f} to {qs_fam('smooth').max():.2f}) and only rarely by Gaussian media with "
-    f"*a* = 50 m. The MEQ "
+    f"Q_{{c}}^{{-1}} ∝ *f*^{{{ccb('A','QI','slope'):.2f}}} (sensor A) and *f*^{{{ccb('B','QI','slope'):.2f}}} (sensor B). "
+    f"Simulations with correlation lengths of 5–134 m show, however, that such a power law is not diagnostic of "
+    f"scale-free heterogeneity. A 2.5-m-grid simulation series extended to 100 Hz is more selective. At 100 Hz the "
+    f"observed coda level ({bt('data','CL100_B'):.2f} in log_{{10}} of coda/S energy) is close to that of pink media "
+    f"({min(bt('R6','CL100_B'), bt('P6','CL100_B')):.2f} to {max(bt('R6','CL100_B'), bt('P6','CL100_B')):.2f}) and is "
+    f"bracketed by exponential media ({btx.CL100_B.min():.2f} to {btx.CL100_B.max():.2f}, decreasing with *a*), "
+    f"whereas the Gaussian medium with *a* = 50 m "
+    f"({min(bt('G50','CL100_B'), bt('G50b','CL100_B')):.2f} to {max(bt('G50','CL100_B'), bt('G50b','CL100_B')):.2f}) and "
+    f"the homogeneous crust ({bt('H','CL100_B'):.2f}) lose their coda. The MEQ "
     f"wavefields thus reject the smooth crustal models of routine microseismic practice and require a strongly "
     f"scattering crust. The power-law (pink) character of that crust is supported by the borehole data, not "
     f"independently by the seismic wavefield.")
@@ -286,7 +292,17 @@ d.p("The raw 4-kHz records (no source-wavelet convolution) are analysed in octav
     "two-segment law, using BIC. A medium with a correlation length *a* should show a change of behaviour near "
     "*ka* ≈ 1 (about 36 Hz for *a* = 15 m and 11 Hz for *a* = 50 m at *V*_{S} ≈ 3.4 km/s), whereas a scale-free "
     "medium should not. The same measures are computed on the FD synthetics in the 25 and 50 Hz bands, which the "
-    "5-m grid resolves.")
+    "5-m grid resolves (sensors A and B).")
+d.h("High-frequency simulations and correlation-length series", 2)
+d.p("To reach 100 Hz the FD grid is refined to 2.5 m (169×209×153 nodes, Δ*t* = 0.125 ms, 2200 steps, Ricker "
+    "90 Hz; at least 5.7 grid points per minimum S wavelength at 160 Hz). To keep the cost manageable the volume is "
+    "reduced to sensor B and the core of the event cloud, which retains 542 events at 92–392 m. The records are "
+    "decimated to the 4-kHz data sampling. This grid is run for the homogeneous crust, pink σ = 0.13 (two "
+    "realisations), exponential *a* = 15 m (two), Gaussian *a* = 50 m (two) and an exponential correlation-length "
+    "series with *a* = 5, 9, 17, 34, 67 and 134 m (σ = 0.13). The series *a* = 9–134 m is also run on the 5-m grid. "
+    "Together the two grids give Q_{c}^{-1} and coda level at 25 and 50 Hz (sensor A, 5-m grid) and at 50 and 100 Hz "
+    "(sensor B, 2.5-m grid). The curvature, slope(50–100 Hz) − slope(25–50 Hz), measures a change of slope of the "
+    "kind expected near *ka* ≈ 1. Synthetic records on the 2.5-m grid are noise-free.")
 
 # ================================================================= RESULTS
 d.h("Results", 1)
@@ -532,10 +548,11 @@ d.p(f"In this band Q_{{c}}^{{-1}} follows a single power law on both sensors, *f
     f"[{ccb('A','QI','slope_lo95'):.2f}, {ccb('A','QI','slope_hi95'):.2f}] at A and "
     f"*f*^{{{ccb('B','QI','slope'):.2f}}} [{ccb('B','QI','slope_lo95'):.2f}, {ccb('B','QI','slope_hi95'):.2f}] at B. "
     f"A break is disfavoured (ΔBIC = {ccb('A','QI','dBIC_break'):+.0f} and {ccb('B','QI','dBIC_break'):+.0f}), so "
-    f"Q_{{c}}^{{-1}} shows no characteristic frequency over S wavelengths of about 17–134 m. This is what a "
-    f"scale-free medium predicts. For a medium with a correlation length *a*, the change of behaviour is expected "
-    f"near *ka* ≈ 1, which for 25–200 Hz corresponds to *a* ≈ 3–21 m rather than to the wavelengths themselves. "
-    f"[SIMULATION TEST WITH EXPONENTIAL MEDIA, a = 5–134 m, IN PROGRESS] The coda level, by contrast, flattens above 50–100 Hz "
+    f"Q_{{c}}^{{-1}} shows no characteristic frequency over S wavelengths of about 17–134 m. For a medium with a "
+    f"correlation length *a*, a change of behaviour would be expected near *ka* ≈ 1. For 25–200 Hz this corresponds "
+    f"to *a* ≈ 3–21 m, not to the wavelengths themselves. Whether this test can detect a correlation length is "
+    f"examined with simulations below (Table 5); it turns out that it cannot. The coda level, by contrast, flattens "
+    f"above 50–100 Hz "
     f"(ΔBIC = {ccb('A','CL','dBIC_break'):.0f} and {ccb('B','CL','dBIC_break'):.0f}). This may reflect the growing "
     f"influence of the resonances toward 200 Hz, and we do not use it for inference.")
 d.figure("FORGE S-coda measures in seven octave bands from 25 Hz to 1.3 kHz",
@@ -561,6 +578,56 @@ d.figure("Q_{c}^{-1} frequency slope between 25 and 50 Hz: FORGE versus simulate
          "Q_{c}^{-1} frequency slope log_{2}[Q_{c}^{-1}(50 Hz)/Q_{c}^{-1}(25 Hz)] at sensor A. Each dot is one "
          "simulated medium (σ = 0.13 unless stated; pink σ = 0.09–0.18). Black line and grey band: FORGE with its "
          "95 % bootstrap interval.", F / "fig_qc_slope.png")
+d.h("Coda at 100 Hz and the correlation-length series", 2)
+rows = []
+lab = {"H": "homogeneous", "P6": "pink (seed 11)", "R6": "pink (seed 33)", "E15": "exponential, a = 15 m",
+       "E15b": "exponential, a = 15 m (seed 33)", "G50": "Gaussian, a = 50 m", "G50b": "Gaussian, a = 50 m (seed 33)",
+       "EX5": "exponential, a = 5 m", "EX9": "exponential, a = 9 m", "EX17": "exponential, a = 17 m",
+       "EX34": "exponential, a = 34 m", "EX67": "exponential, a = 67 m", "EX134": "exponential, a = 134 m"}
+fm = lambda v: "—" if pd.isna(v) else f"{v:+.2f}"
+for m in lab:
+    rows.append([lab[m], fm(bt(m, 'slope_25_50')), fm(bt(m, 'slope_50_100')), fm(bt(m, 'curvature')),
+                 f"{bt(m, 'CL100_B'):.2f}"])
+rows.append(["FORGE data", f"{bt('data','slope_25_50'):+.2f} [{bt('data','s1_lo'):+.2f}, {bt('data','s1_hi'):+.2f}]",
+             f"{bt('data','slope_50_100'):+.2f} [{bt('data','s2_lo'):+.2f}, {bt('data','s2_hi'):+.2f}]",
+             f"{bt('data','curvature'):+.2f} [{bt('data','curv_lo'):+.2f}, {bt('data','curv_hi'):+.2f}]",
+             f"{bt('data','CL100_B'):.2f}"])
+d.table("Q_{c}^{-1} slopes, their curvature and the 100-Hz coda level",
+        ["Medium (σ = 0.13)", "Slope 25–50 Hz (A)", "Slope 50–100 Hz (B)", "Curvature", "Coda level 100 Hz (B)"],
+        rows, [5.2, 3.0, 3.0, 3.0, 2.6],
+        legend="Slopes are log_{2} ratios of median Q_{c}^{-1} between octave bands; curvature = slope(50–100) − "
+               "slope(25–50). Brackets: 95 % bootstrap intervals over events. Coda level = log_{10}(E_{coda}/E_{S}) at "
+               "100 Hz. The 25–50 Hz slope uses the 5-m grid, the 50–100 Hz slope and 100-Hz level the 2.5-m grid; "
+               "a = 5 m is not resolved on the 5-m grid.")
+cv = BT.drop(index="data").curvature.dropna()
+d.p(f"Table 5 and Fig. 17 give the results of the correlation-length series. The Q_{{c}}^{{-1}} curvature does not "
+    f"identify a correlation length. The simulated media, including the pink, Gaussian and homogeneous crusts, give "
+    f"curvatures of {cv.min():+.2f} to {cv.max():+.2f}, positive in all but {['none','one','two','three'][int((cv < 0).sum())]}, with no systematic "
+    f"dependence on *a*, while "
+    f"FORGE gives {bt('data','curvature'):+.2f} [{bt('data','curv_lo'):+.2f}, {bt('data','curv_hi'):+.2f}]. The "
+    f"single power law of the observed Q_{{c}}^{{-1}} is therefore not evidence for scale-free heterogeneity. The "
+    f"common positive curvature of the models probably reflects the short coda window in the 25-Hz band rather than "
+    f"the medium. The coda level at 100 Hz is far more selective. It falls steadily with correlation length in the "
+    f"exponential series ({bt('EX9','CL100_B'):.2f} for *a* = 9 m to {bt('EX134','CL100_B'):.2f} for *a* = 134 m), "
+    f"because large-*a* media lack the small-scale structure that scatters 30-m wavelengths. The Gaussian media with "
+    f"*a* = 50 m ({bt('G50','CL100_B'):.2f}, {bt('G50b','CL100_B'):.2f}) and the homogeneous crust "
+    f"({bt('H','CL100_B'):.2f}) fall 0.6–1.6 log units below FORGE ({bt('data','CL100_B'):.2f}). The pink realisations "
+    f"({bt('P6','CL100_B'):.2f}, {bt('R6','CL100_B'):.2f}) and the exponential media with *a* ≳ 30 m lie within about "
+    f"0.4. The Gaussian medium that matched the 20–80 Hz coda statistics as well as pink noise is thus rejected once "
+    f"the analysis reaches 100 Hz. The observed 50–100 Hz slope ({bt('data','slope_50_100'):+.2f}) is steeper than in "
+    f"every simulated medium except the smallest-scale exponential ones (*a* = 5 and 9 m: {bt('EX5','slope_50_100'):+.2f}, "
+    f"{bt('EX9','slope_50_100'):+.2f}); the pink realisations ({bt('P6','slope_50_100'):+.2f}, "
+    f"{bt('R6','slope_50_100'):+.2f}) lie at the edge of its interval. Among the simulated media, only pink noise comes "
+    f"close to both the 100-Hz coda level and the 50–100 Hz slope. Media rich in very small scales match the slope "
+    f"but give too much 100-Hz coda at σ = 0.13, and media with large *a* match the level but not the slope. With "
+    f"one realisation per correlation length and σ fixed, this is suggestive rather than decisive.")
+d.figure("Q_{c}^{-1} frequency dependence and 100-Hz coda level versus correlation length",
+         "a) Q_{c}^{-1} normalised at 50 Hz, from the 25–50 Hz slope (sensor A, 5-m grid, circles) and the 50–100 Hz "
+         "slope (sensor B, 2.5-m grid, squares); black: FORGE; blue: exponential series (darker = larger *a*); orange: "
+         "pink; green: Gaussian *a* = 50 m; grey: homogeneous. b) Curvature, slope(50–100 Hz) − slope(25–50 Hz), "
+         "versus correlation length; black line and grey band: FORGE with 95 % bootstrap interval; pink (orange) and "
+         "homogeneous (grey) media are plotted at the right and left edges. c) Coda level at 100 Hz (sensor B) versus "
+         "correlation length; black line: FORGE; symbols as in b).", F / "fig_break_test.png")
 
 # ================================================================= DISCUSSION
 d.h("Discussion", 1)
@@ -591,9 +658,10 @@ d.p("Three results should be kept apart. First, every smooth crust (homogeneous,
     "the coda requires strong heterogeneity (σ of roughly 0.1–0.2 at 5-m scale) but does not establish its spectral "
     "shape. In repeated truth tests the wavefield separates small-scale-rich media from Gaussian media reliably, but "
     "cannot separate pink from exponential media, which are nearly the same field over 10–700 m. On FORGE, with two "
-    "realisations per family, it prefers no family in the coda statistics. The frequency slope of Q_{c}^{-1} "
-    "between 25 and 50 Hz is more selective: it matches pink and exponential media and excludes smooth crusts "
-    "and, in most realisations, the large-scale Gaussian medium. Third, the borehole data supply the shape. The sonic log is "
+    "realisations per family, it prefers no family in the 20–80 Hz coda statistics. Higher frequencies are more "
+    "selective. The 25–50 Hz Q_{c}^{-1} slope excludes smooth crusts and most large-scale Gaussian realisations, "
+    "and the 100-Hz coda level rejects the large-scale Gaussian medium outright while matching pink noise. Third, the "
+    "borehole data supply the shape. The sonic log is "
     "scale-free over 12–200 m, which is consistent with pink noise, marginally with an exponential medium and not with "
     "a Gaussian one. The two lines of evidence are complementary rather than in conflict: the seismic data fix the "
     "strength of heterogeneity in the stimulated volume, and the log fixes its scaling in the intact rock. Taken "
@@ -606,15 +674,19 @@ d.p("That coda waves are scattered by crustal heterogeneity is long established 
     "power-law heterogeneity spectra have been inferred from well logs [@holliger1996; @leary1997]. What has "
     "remained open is which heterogeneity produces the coda of a given reservoir. Stochastic models are often "
     "chosen for convenience and fitted with a free correlation length. The FORGE data allow a more specific "
-    "answer at the reservoir scale. The heterogeneity must be strong (σ ≈ 0.1–0.2 at 5-m scale) and rich in "
-    "small scales (≲ 15 m). Its coda attenuation shows no characteristic frequency over S wavelengths of about "
-    "17–134 m (Q_{c}^{-1} as a single power law over 25–200 Hz), as expected for a scale-free medium. The borehole "
-    "data, in turn, show a scale-free spectrum over 12–200 m. A lognormal pink-noise field, the same statistical "
-    "object that describes poro-permeability in the GFI framework, is consistent with all of these observations. If this holds more widely, the coda is not a nuisance "
+    "answer at the reservoir scale. The heterogeneity must be strong (σ ≈ 0.1–0.2 at 5-m scale), and it must "
+    "retain enough small-scale structure to sustain the coda at 100 Hz. That requirement rejects the smooth crusts "
+    "and the large-scale Gaussian medium. Of the media tested, pink noise alone comes close to both the 100-Hz coda "
+    "level and the 50–100 Hz Q_{c}^{-1} slope. The single power law of Q_{c}^{-1} over 25–200 Hz is not, by itself, "
+    "evidence of scale-free heterogeneity, because media with correlation lengths of 9–134 m reproduce it equally "
+    "well in our simulations. The borehole data show a scale-free spectrum over 12–200 m. A lognormal pink-noise "
+    "field, the same statistical object that describes poro-permeability in the GFI framework, is consistent with "
+    "all of these observations. If this holds more widely, the coda is not a nuisance "
     "tail but a direct observable of the flow-controlling heterogeneity. This link can be tested only with "
     "broadband near-source records such as those at FORGE. At 200 samples/s the band above 100 Hz, which carries "
-    "most of the S-wave energy of these events, is not recorded at all. The present data do not, however, "
-    "exclude an exponential medium, which differs from pink noise mainly below 10 m.")
+    "most of the S-wave energy of these events, is not recorded at all. Our own results show why the band matters: "
+    "at 20–80 Hz a Gaussian medium fits the coda as well as pink noise, and it fails only at 100 Hz. The present "
+    "data do not, however, exclude an exponential medium, which differs from pink noise mainly below 10 m.")
 d.h("Implications for microseismic flow imaging", 2)
 d.p("A strongly heterogeneous crust with σ of several percent is invisible to travel-time location (residuals of ~1 ms) "
     "but dominates the MEQ coda. For EGS monitoring this means that (a) travel-time residuals of ~1 ms "
@@ -630,8 +702,11 @@ d.bullets([
     "coda above about 200 Hz.",
     "The model grid in (σ, *p*) is coarse and *p* is weakly resolved; intrinsic *Q* and fracture-specific (non-lognormal) "
     "scatterers were not included.",
-    "Correlation-length competitors were simulated only at σ = 0.13 and two correlation lengths, with at most two "
-    "candidate and three truth realisations per family; a full (σ, *a*) search was not performed.",
+    "Correlation-length competitors were simulated only at σ = 0.13, with at most two candidate and three truth "
+    "realisations per family and a single realisation per correlation length in the *a* = 5–134 m series; a full "
+    "(σ, *a*) search was not performed, so the trade-off between σ and *a* in the 100-Hz coda level is not resolved.",
+    "The 25–50 Hz and 50–100 Hz slopes come from different sensors and grids, and the 2.5-m-grid synthetics are "
+    "noise-free.",
     "Catalogue hypocentres were computed by the operator with a smooth velocity model, so the travel-time residual "
     "statistics mix structure with location error.",
 ])
@@ -654,13 +729,17 @@ d.bullets([
     f"suggests stimulation-enhanced scattering.",
     f"At equal σ, nine synthetic truth tests show that the wavefield separates small-scale-rich from Gaussian media "
     f"({n_pl} of 9) but not pink from exponential media ({n_pe} of 6), which are {rexp*100:.0f} % correlated on the "
-    f"simulated scales. The FORGE data prefer no spectral family. The scale-free 56-32 log spectrum favours pink "
+    f"simulated scales. At 20–80 Hz the FORGE data prefer no spectral family; at 100 Hz they reject the large-scale "
+    f"Gaussian medium. The scale-free 56-32 log spectrum favours pink "
     f"noise and excludes Gaussian media. The seismic data establish heterogeneity strength; the pink spectral form "
     f"rests on the borehole data.",
     f"The 4-kHz records carry S-wave energy above noise to about 1.8 kHz. Over 25–200 Hz the coda attenuation "
-    f"follows a single power law, Q_{{c}}^{{-1}} ∝ *f*^{{{ccb('A','QI','slope'):.1f}}}, with no characteristic "
-    f"frequency, and its 25–50 Hz slope matches pink and exponential media but not smooth or large-scale Gaussian "
-    f"media. Everything above 100 Hz, including the upper half of this band, is inaccessible at 200 samples/s.",
+    f"follows a single power law, Q_{{c}}^{{-1}} ∝ *f*^{{{ccb('A','QI','slope'):.1f}}}. Simulations with correlation "
+    f"lengths of 5–134 m show that this is not diagnostic of scale-free heterogeneity.",
+    f"Raising the simulated band to 100 Hz (2.5-m grid) separates the media that 20–80 Hz could not. The 100-Hz coda "
+    f"level rejects the large-scale Gaussian medium and the smooth crust by 0.6–1.6 log units. Pink noise comes "
+    f"closest to both the 100-Hz coda level and the 50–100 Hz Q_{{c}}^{{-1}} slope; with one realisation per medium "
+    f"this is suggestive rather than decisive. Everything above 100 Hz is inaccessible at 200 samples/s.",
 ])
 
 # ================================================================= BACK MATTER

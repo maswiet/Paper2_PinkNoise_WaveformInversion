@@ -93,3 +93,12 @@ Rebuild order: s01 → s03 → s04 → s05 → s06 → s06b → run_sgt(each mod
   table_qc_slope.csv, fig_qc_slope.png.
 - High-frequency FD (`forge_setup_hf.m`, `run_sgt_hf.m`, `synth_records_hf.m`): dx 2.5 m, Ricker 90 Hz, sensor B,
   models H P6 E15 G50 R6 E15b G50b → sgt_hf/ (running). Manuscript: new Results subsections + Figs 13–16, Table 4.
+
+## Update 2026-09-30 — high-frequency runs and correlation-length break test (`s17_break_test.m`)
+- 2.5-m grid (sensor B, 50/100 Hz) for H, P6, R6, E15, E15b, G50, G50b and exponential a = 5, 9, 17, 34, 67, 134 m
+  (`queue_aseries.sh`); a = 9–134 m also on the 5-m grid. Table `results/table_break_test.csv`, `figs/fig_break_test.png`.
+- Qc^-1 curvature (slope 50–100 minus 25–50 Hz) is NOT diagnostic: models −0.08…+0.49, no trend with a; data −0.04.
+- 100-Hz coda level (log10 coda/S, sensor B): data −1.58; pink −1.20/−1.50; exponential −1.03 (a 9 m) … −1.82 (a 134 m);
+  Gaussian a 50 m −2.20/−3.01; homogeneous −3.17 → large-scale Gaussian and smooth crusts rejected at 100 Hz.
+- 50–100 Hz Qc^-1 slope: data −1.50 [−1.70, −1.18]; only exponential a ≤ 9 m and pink (edge) inside; pink is the only
+  medium close to both criteria (single realisations, σ fixed → suggestive).

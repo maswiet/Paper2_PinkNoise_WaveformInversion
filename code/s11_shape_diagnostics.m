@@ -1,11 +1,15 @@
-function Z = s11_shape_diagnostics(name, mech)
+function Z = s11_shape_diagnostics(name, mech, win)
 % S11  Shape-sensitive wavefield diagnostics (beyond coda strength):
 %   D1 frequency dependence of the S coda: clevel2(40-80 Hz) - clevel2(20-40 Hz), sensor A, per event
 %   D2 inter-event coherence of the S coda vs event separation (both sensors, 40-80 Hz):
 %      max normalised 2-component cross-correlation (lag +-8 ms) of S+15..S+100 ms windows
 % name : 'data' or a model name;  mech : 'forge' | 'fixed' (models only)
+% win  : D2 window [start end] in s after the S time (default [0.015 0.100]); a non-default window
+%        is saved as shape_<name>_<mech>_w<start ms>.mat (e.g. _w40 for S+40..S+100 ms)
 % Output: ../results/shape_<name>_<mech>.mat
 if nargin < 2, mech = 'forge'; end
+if nargin < 3 || isempty(win), win = [0.015 0.100]; end
+sfx = ''; if abs(win(1) - 0.015) > 1e-6 || abs(win(2) - 0.100) > 1e-6, sfx = sprintf('_w%d', round(1e3*win(1))); end
 here = fileparts(mfilename('fullpath'));
 G = forge_setup(); fs = 1/G.dt;
 edges = [0 5 10 20 40 80 160];
@@ -48,10 +52,10 @@ lagmax = round(0.008*fs);
 for g = 1:2
     t = REC(g).t; n = size(REC(g).H,3);
     tS = REC(g).tp + REC(g).R*(1/G.vs - 1/G.vp);
-    nw = round(0.085*fs); W = zeros(nw + 2*lagmax, 2, n); ok = false(n,1);
+    nw = round((win(2) - win(1))*fs); W = zeros(nw + 2*lagmax, 2, n); ok = false(n,1);
     for i = 1:n
         X = filtfilt(b, a, REC(g).H(:,:,i));
-        i0 = find(t >= tS(i) + 0.015, 1) - lagmax;
+        i0 = find(t >= tS(i) + win(1), 1) - lagmax;
         if isempty(i0) || i0 < 1 || i0 + size(W,1) - 1 > numel(t), continue; end
         w = X(i0:i0+size(W,1)-1, :);
         W(:,:,i) = w / (sqrt(mean(w(:).^2)) + realmin); ok(i) = true;   % scale-free (synthetics ~1e-9)
@@ -82,7 +86,8 @@ for g = 1:2
         end
     end
 end
-save(fullfile(here,'..','results',sprintf('shape_%s_%s.mat', name, mech)), '-struct', 'Z');
-fprintf('%s (%s): D1 median %.2f | coherence A %s | B %s\n', name, mech, median(Z.dlev,'omitnan'), ...
+Z.win = win;
+save(fullfile(here,'..','results',sprintf('shape_%s_%s%s.mat', name, mech, sfx)), '-struct', 'Z');
+fprintf('%s (%s%s): D1 median %.2f | coherence A %s | B %s\n', name, mech, median(Z.dlev,'omitnan'), ...
     mat2str(Z.coh(1,:),2), mat2str(Z.coh(2,:),2));
 end

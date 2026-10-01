@@ -80,6 +80,16 @@ LO = rd("table_calib_loso.csv").set_index("case")
 STG = rd("table_stage_coda.csv")
 FS = rd("table_field_stats.csv").set_index("medium")
 D2 = rd("table_d2_uncertainty.csv")
+D2A = rd("table_d2_allpairs.csv"); D2W = rd("table_d2_windows.csv"); D2P = rd("table_d2_perturb.csv")
+W15, W40, W50, WNZ = "S+15-100 ms", "S+40-100 ms", "S+50-110 ms", "S+550-610 ms"
+da = lambda m, w, g, c="median_coh_all": D2A[(D2A.model == m) & (D2A.window == w) & (D2A.sensor == g)][c].iloc[0]
+def dar(ms, w, g):
+    v = [da(m, w, g) for m in ms if ((D2A.model == m) & (D2A.window == w)).any()]
+    return f"{min(v):.2f}–{max(v):.2f}" if len(v) > 1 else f"{v[0]:.2f}"
+D2SM, D2DT, D2ST = ["H", "L", "GRAD3", "A"], ["L6", "FZ"], ["P3", "P6", "E15", "G50"]
+dnoise = lambda g: da("data (noise window)", WNZ, g)
+_cases = [(m, w, g) for m in ["H", "L", "GRAD3", "A", "FZ"] for w in (W40, W50) for g in "AB"]
+nsep = sum(da(m, w, g, "lo95") > da("data", w, g, "hi95") for m, w, g in _cases); ntot = len(_cases)
 LS = rd("table_log_slope_summary.csv").iloc[0]
 LSV = rd("table_log_slope_variants.csv")
 LSM = rd("table_log_spectral_models.csv")
@@ -127,13 +137,14 @@ def sigeff(fam, g):
     return f"{v:.3f}"
 
 
-TITLE = ("Utah FORGE downhole microearthquake codas require small-scale 3-D heterogeneity: elastic tests of smooth, "
+RELEASE = os.environ.get("RELEASE", "v1.0-submission")
+TITLE = ("Late S-wave energy and decorrelation in Utah FORGE downhole microearthquakes: elastic tests of smooth, "
          "layered, fracture-zone and stochastic media")
 
 d = SDoc()
 d.embed = bool(os.environ.get("EMBED"))
 d.p(f"**{TITLE}**", align="center", size=14)
-d.p("Wiwit Suryanto^{1*}, Peter Leary^{2}, [AUTHOR LIST TO BE CONFIRMED BY ALL AUTHORS BEFORE SUBMISSION]", align="center")
+d.p("Wiwit Suryanto^{1*} and Peter Leary^{2}", align="center")
 for a in ["^{1} Department of Physics, Faculty of Mathematics and Natural Sciences, Universitas Gadjah Mada, Sekip Utara BLS 21, Yogyakarta 55281, Indonesia",
           "^{2} Geoflow Imaging, Auckland 1010, New Zealand"]:
     d.p(a, align="left", size=11)
@@ -152,28 +163,27 @@ else:
     se_txt = pend("sigma_eff range")
 abstract = (
     f"Downhole records of microearthquakes (MEQs) induced by the April 2022 stimulation at Utah FORGE contain long "
-    f"S-wave codas. We test which elastic media reproduce them. {n_ev} MEQs recorded at 4 kHz by two "
+    f"S-wave codas. {n_ev} MEQs recorded at 4 kHz by two "
     f"three-component sensors in well 56-32 are compared with 3-D finite-difference wavefields computed by "
     f"reciprocity for smooth media (homogeneous, 50-m sonic-log layering, 3-D gradients, "
     f"transverse isotropy), deterministic small-scale media (6-m sonic-log layering, 5-m-thick fracture zones) and "
     f"lognormal stochastic media with power-law, exponential and Gaussian spectra. Moment tensors fitted to the "
     f"direct waves (P − 10 ms to S + 15 ms) predict the 40–80 Hz energy from S + 40 to S + 100 ms. The smooth media "
     f"under-predict this late energy by median factors of {fac(smA.max()):.0f}–{fac(smA.min()):.0f} at the upper "
-    f"and {fac(smB.max()):.0f}–{fac(smB.min()):.0f} at the lower sensor. This deficit persists for alternative "
-    f"windows, deviatoric and double-couple sources, finite source duration, well-timed events and a worst-case "
-    f"in-band tool resonance; the simulated coda is converged in grid and absorbing boundary. Thin layers and fracture zones "
+    f"and {fac(smB.max()):.0f}–{fac(smB.min()):.0f} at the lower sensor, robustly to windows, source constraints, "
+    f"source duration, event timing and a worst-case in-band tool resonance. Thin layers and fracture zones "
     f"reduce it to factors of {fac(dtA.max()):.0f}–{fac(dtA.min()):.0f} (upper) and {fac(dtB.max()):.1f}–{fac(dtB.min()):.1f} "
-    f"(lower sensor), and stochastic media match it. The observed coda decorrelates between "
-    f"neighbouring events ({d2('data','A',0):.2f} to {d2('data','A',80):.2f} from 0–5 to 80–160 m), whereas smooth "
-    f"and deterministic small-scale media keep it coherent (≥ {min(d2(m,'A',80) for m in d2det):.2f}) and "
-    f"stochastic media decorrelate it. Within the isotropic lognormal model class, the late energy implies an "
-    f"effective scattering strength σ_{{eff}} ≈ {se_txt} (standard deviation of ln *V*), depending on sensor and "
-    f"spectral family. A larger simulation domain raises the stochastic coda, so these values are upper bounds, "
+    f"(lower sensor); stochastic media span the observed late-energy distributions. In the early coda the waveforms of neighbouring events decorrelate with separation, as in the stochastic media, "
+    f"whereas the tested smooth and simple deterministic media stay coherent. In the pure late coda all media "
+    f"approach the noise level, and only the smooth media and the planar fracture zones remain more coherent than "
+    f"the data. The late energy implies an effective scattering strength σ_{{eff}} ≈ {se_txt} (standard deviation "
+    f"of ln *V*), depending on sensor and family; one domain-size test suggests that these are upper bounds, "
     f"comparable to the sonic-log value of {K.log_sig6:.3f}. At 20–80 Hz neither per-event nor common-grid "
     f"statistical comparisons (event bootstrap, holdout) distinguish power-law from exponential or Gaussian spectra, and the sonic-log spectrum (β = {LS.beta_ref:.2f} ± {LS.beta_se_jackknife:.2f} over "
     f"12–200 m) does not exclude a short correlation length. Within elastic modelling, the late S energy thus "
-    f"requires strong small-scale 3-D heterogeneity, unless an unmodelled site response of comparable size is "
-    f"present; its spectral form is not resolved. Deterministic comparison against an unknown stochastic "
+    f"requires structure at the 5–10 m scale, and its decorrelation favours distributed 3-D heterogeneity without "
+    f"excluding fine layering, unless an unmodelled site response of comparable size is present; the spectral "
+    f"form is not resolved. Deterministic comparison against an unknown stochastic "
     f"realisation favours smooth media, so medium-class selection should use wavefield statistics.")
 d.p(abstract)
 NW_ABS = len(abstract.split())
@@ -268,9 +278,11 @@ d.p(f"The 56-32 sonic log (1950–2780 m, calliper-screened) gives a detrended l
     f"correlation length. It is also a sample of intact rock along one line, not of the stimulated volume that the "
     f"MEQ waves traverse.")
 d.figure("Utah FORGE 2022 geometry: stimulation MEQs, 56-32 sensors and FD volume",
-         f"a) Catalogued MEQs inside the FD interior (colour = stimulation stage), the calibrated sensors A and B "
-         "(red triangles) and the FD interior (dotted box). b) Hypocentral distances to sensors A and B.",
-         F / "fig_geometry.png")
+         "a) Map view and b) east–depth section of the 416 analysed MEQs (orange: stage 3; blue: stage 2) and of "
+         "the other catalogued events inside the FD interior (grey), with the calibrated sensors A and B in well 56-32 "
+         "(red triangles) and the FD interior (dotted). Coordinates relative to the 16A(78)-32 wellhead. "
+         "c) Hypocentral distances of the 416 events to sensors A and B.",
+         F / "fig_geometry_rev.png")
 d.figure("FORGE 56-32 records and S envelopes",
          "a, d) Horizontal records (one component, 40–80 Hz) of 40 events ordered by hypocentral distance for sensors "
          "A and B; the dashed line is the predicted S time. b, e) Median (solid) and interquartile range (dotted) of "
@@ -415,10 +427,16 @@ d.p("where *D*_{KS} is the two-sample Kolmogorov–Smirnov distance between the 
     "events and scored on the other half (20 random splits plus a near/far split by distance).")
 d.h("Inter-event coda coherence", 2)
 d.p("For pairs of events recorded on the same sensor, D2 is the maximum normalised two-component cross-correlation "
-    "(lag ±8 ms) of the 40–80 Hz window S + 15 to S + 100 ms, summarised as the median in bins of inter-event "
-    "separation (0–5 to 80–160 m). Pairs that share an event are not independent, so 95 % intervals come from a "
-    "cluster bootstrap over events (each resampled event carries all its pairs). To test sensitivity to catalogue "
-    "location error, the separations were recomputed after perturbing every hypocentre by 5 and 10 m.")
+    "(lag ±8 ms) of a 40–80 Hz coda window, summarised as the median in bins of inter-event separation (0–5 to "
+    "80–160 m) and as the median over all pairs within 160 m. Three windows are used: S + 15 to S + 100 ms (early "
+    "coda, including the tail of the S pulse), S + 40 to S + 100 ms (the window of the late-energy test) and "
+    "S + 50 to S + 110 ms. The coherence of noise alone is measured on the same records in a window S + 550 to "
+    "S + 610 ms. Every synthetic record contains that event's own recorded noise at its observed SNR, so the noise "
+    "contribution is common to data and media. Pairs that share an event are not independent, so 95 % intervals "
+    "come from a cluster bootstrap over events (each resampled event carries all its pairs). To test sensitivity "
+    "to location error, the hypocentres used for binning were perturbed by isotropic Gaussian errors of 5, 10, "
+    "20, 30 and 50 m, for data and media alike. The all-pairs median does not depend on the binning and is "
+    "therefore insensitive to location error.")
 d.h("Synthetic truth tests", 2)
 d.p("The ability of the statistical comparison to select a medium class was tested with synthetic truths. Two "
     "truths were used in the main test: a pink medium (T1, σ = 0.045) and 50-m layering with VTI (T2). A further "
@@ -438,7 +456,7 @@ d.p(f"Fig. 3 compares observed and predicted sensor-A seismograms for three even
     f"{fac(smB.max()):.0f}–{fac(smB.min()):.0f} at sensor B, and only {smwA.min():.0f}–{smwA.max():.0f} % (A) and "
     f"{smwB.min():.0f}–{smwB.max():.0f} % (B) of events fall within a factor of three. Smooth 3-D gradients "
     f"({c('GRAD3')}, A/B) and VTI anisotropy ({c('A')}) alter the direct waves but add no late energy.")
-d.p(f"Deterministic small-scale structure changes this substantially. The sonic log at its 6-m resolution (L6) "
+d.p(f"The two simple deterministic small-scale media tested change this substantially. The sonic log at its 6-m resolution (L6) "
     f"gives {c('L6')}, and the thin fracture zones (FZ) give {c('FZ')}: under-prediction by factors of "
     f"{fac(cpa('L6','med_log10_pred_obs_A')):.0f} and {fac(cpa('FZ','med_log10_pred_obs_A')):.0f} at sensor A but "
     f"only {fac(cpa('L6','med_log10_pred_obs_B')):.1f} and {fac(cpa('FZ','med_log10_pred_obs_B')):.1f} at sensor B, "
@@ -570,9 +588,10 @@ if CV is not None:
         f"scattered energy. A smooth medium has no such scatterers, so the smooth-model deficit is unaffected. The "
         f"slower decay in the larger domain may also explain why the observed coda decayed more slowly than the "
         f"simulated coda in the original analysis. For the stochastic media, the reference "
-        f"domain underestimates the late energy, and the effective scattering strength derived below is an upper "
+        f"domain probably underestimates the late energy, and the effective scattering strength derived below is probably an upper "
         f"bound. With the sensitivity of the median ratio to σ found below ({rslope:.2f} log units per unit "
-        f"change of ln σ), the domain effect corresponds to σ_{{eff}} values about {fdom:.1f} times too large.")
+        f"change of ln σ), this single test implies that σ_{{eff}} from the reference domain may be overestimated by a "
+        f"factor of about {fdom:.1f}. Whether the same factor applies to other families and to sensor A was not tested.")
 else:
     d.p(pend("convergence results (S26)"))
 d.h("Effective scattering strength", 2)
@@ -607,49 +626,50 @@ else:
 d.figure("Median predicted/observed late S energy versus σ for each spectral family",
          "a) Sensor A. b) Sensor B. Median over events of log_{10}(predicted/observed), averaged over realisations "
          "where several exist. The zero crossing defines σ_{eff}; dotted lines: factor of three; grey band: range of "
-         "the smooth baselines.", F / "fig_sigma_eff.png")
+         "the smooth media; purple dash-dotted and dashed lines: 6-m layering (L6) and fracture zones (FZ).", F / "fig_sigma_eff.png")
 d.h("Inter-event coda coherence", 2)
-
-
-SM_D2 = [m for m in SMOOTH if m in D2M]
-DT_D2 = [m for m in DET if m in D2M]
-
-
-def d2_sep(s, models):
-    """smallest bin start from which every listed model's 95 % interval lies above the data interval"""
-    los = sorted(D2.d_lo_m.unique())
-    ok = [all(d2(m, s, lo, "lo95") > d2("data", s, lo, "hi95") for m in models) for lo in los]
-    for i, lo in enumerate(los):
-        if all(ok[i:]):
-            return lo
-    return None
-
-
-r80 = lambda ms, g: f"{min(d2(m, g, 80) for m in ms):.2f}–{max(d2(m, g, 80) for m in ms):.2f}"
-d.p(f"Fig. 7 shows D2 with cluster-bootstrap intervals. The observed coda of neighbouring events is moderately "
-    f"coherent ({d2('data','A',0):.2f} at sensor A and {d2('data','B',0):.2f} at B for 0–5 m) and decorrelates to "
-    f"{d2('data','A',80):.2f} and {d2('data','B',80):.2f} at 80–160 m. In the smooth media the coda remains coherent "
-    f"({r80(SM_D2,'A')} at 80–160 m, sensor A; {r80(SM_D2,'B')} at B), and their 95 % intervals lie above the data "
-    f"interval in every bin from {d2_sep('A', SM_D2):.0f} m separation at sensor A and from {d2_sep('B', SM_D2):.0f} m "
-    f"at sensor B. The deterministic small-scale media stay as coherent as the smooth media at sensor A "
-    f"({r80(DT_D2,'A')}) and decorrelate only partly at sensor B ({r80(DT_D2,'B')}); their intervals lie above the "
-    f"data from {d2_sep('A', DT_D2):.0f} m (A) and {d2_sep('B', DT_D2):.0f} m (B). Thin layers and planar fracture "
-    f"zones thus add late energy, but energy that is similar for neighbouring events, because it is generated by "
-    f"the same few structures along similar paths. Stochastic media decorrelate as the data do, although most stay more coherent than the data "
-    f"at 10–40 m. Perturbing the hypocentres by 10 m changes the observed medians by ≤ "
-    f"{np.nanmax(np.abs(D2[D2.model=='data'].median_coh_loc10m - D2[D2.model=='data'].median_coh)):.2f}. The 0–5 m "
-    f"bin contains only {int(d2('data','A',0,'n_pairs'))} pairs from {int(d2('data','A',0,'n_events'))} events, and "
-    f"its interval is wide. D2 is measured on the same records as the late energy, so it is a second descriptor of "
-    f"the same data, not an independent experiment. It does, however, discriminate between the media that the "
-    f"late-energy level alone cannot separate: it requires the scattering structure to vary on the scale of the "
-    f"event separations, as 3-D random heterogeneity does and a few deterministic layers or planes do not.")
-d.figure("Inter-event coda coherence with cluster-bootstrap uncertainty",
-         "a) Sensor A. b) Sensor B. Median coherence of the 40–80 Hz coda (S + 15 to S + 100 ms) versus inter-event "
-         "separation, with 95 % cluster-bootstrap intervals over events. Black: FORGE; dashed: FORGE with hypocentres "
-         "perturbed by 10 m; grey: smooth media (H, L, GRAD3, A); purple: 6-m layering (L6) and fracture zones (FZ); "
-         "orange: pink (σ = 0.09, 0.13); blue: "
-         "exponential (*a* = 15 m); green: Gaussian (*a* = 50 m), σ = 0.13. Symbols are offset horizontally for "
-         "clarity.", F / "fig_d2_uncertainty.png")
+dpert = lambda w, g, sp: D2P[(D2P.model == "data") & (D2P.window == w) & (D2P.sensor == g) & (D2P.perturb_m == sp)
+                              & (D2P.d_lo_m >= 20)].median_coh
+dmax = max(abs(dpert(w, g, 50).values - D2W[(D2W.model == "data") & (D2W.window == w) & (D2W.sensor == g)
+                                             & (D2W.d_lo_m >= 20)].median_coh.values).max()
+           for w in (W15, W40, W50) for g in "AB")
+d.p(f"Fig. 7 shows D2 in the three windows. In the early coda (S + 15 to S + 100 ms) the observed coherence falls "
+    f"from {d2('data','A',0):.2f} at 0–5 m to {d2('data','A',80):.2f} at 80–160 m (sensor A; {d2('data','B',0):.2f} to "
+    f"{d2('data','B',80):.2f} at B). The smooth media stay coherent (all pairs within 160 m: {dar(D2SM, W15, 'A')} "
+    f"at A, {dar(D2SM, W15, 'B')} at B, against "
+    + (f"{da('data', W15, 'A'):.2f} at both sensors for the data)" if f"{da('data', W15, 'A'):.2f}" == f"{da('data', W15, 'B'):.2f}"
+       else f"{da('data', W15, 'A'):.2f} and {da('data', W15, 'B'):.2f} for the data)") + f", and so do the two deterministic small-scale media ({dar(D2DT, W15, 'A')} and {dar(D2DT, W15, 'B')}). "
+    f"The stochastic media decorrelate as the data do ({dar(D2ST, W15, 'A')} and {dar(D2ST, W15, 'B')}). This "
+    f"window, however, contains the tail of the S pulse and is close to the window of the source fit.")
+d.p(f"In the late windows the picture changes. All coherences are lower and approach the coherence of noise "
+    f"alone ({dnoise('A'):.2f} at A and {dnoise('B'):.2f} at B). The observed late coda is at or below this level "
+    f"({da('data', W40, 'A'):.2f} and {da('data', W40, 'B'):.2f} for S + 40 to S + 100 ms; "
+    f"{da('data', W50, 'A'):.2f} and {da('data', W50, 'B'):.2f} for S + 50 to S + 110 ms). Because the synthetics "
+    f"carry the same noise, D2 in these windows measures how much coherent late energy a medium adds. The smooth "
+    f"media ({dar(D2SM, W40, 'A')} at A, {dar(D2SM, W40, 'B')} at B) and the fracture zones "
+    f"({da('FZ', W40, 'A'):.2f}, {da('FZ', W40, 'B'):.2f}) remain more coherent than the data in both late windows; "
+    f"their 95 % intervals lie above the data interval in {nsep} of {ntot} medium–sensor–window cases "
+    f"(Additional file 1: Table S17). The stochastic media "
+    f"({dar(D2ST, W40, 'A')}, {dar(D2ST, W40, 'B')}) and the 6-m layering ({da('L6', W40, 'A'):.2f}, "
+    f"{da('L6', W40, 'B'):.2f}) come closest; in S + 50 to S + 110 ms the 6-m layering is as close to the data as "
+    f"the stochastic media at sensor A ({da('L6', W50, 'A'):.2f} against {dar(D2ST, W50, 'A')} and "
+    f"{da('data', W50, 'A'):.2f} observed). In the pure late coda D2 therefore separates the data from the smooth "
+    f"media and from the planar fracture zones, but not from fine 1-D layering. The separation of distributed 3-D "
+    f"heterogeneity from fine layering rests on the early-coda window and is correspondingly less secure.")
+d.p(f"Location error does not change these conclusions. Perturbing the hypocentres of data and media by up to "
+    f"50 m flattens the binned curves, as expected, but changes the observed medians at separations of 20 m or more "
+    f"by at most {dmax:.2f} (Additional file 1: Fig. S10), and the all-pairs levels, which do not depend on the "
+    f"binning, are unaffected. We therefore do not use the 0–5 and 5–10 m bins for inference (the 0–5 m bin "
+    f"contains only {int(d2('data','A',0,'n_pairs'))} pairs from {int(d2('data','A',0,'n_events'))} events). D2 is "
+    f"measured on the same records as the late energy, so it is a second descriptor of the same data, not an "
+    f"independent experiment.")
+d.figure("Inter-event coda coherence in early and late coda windows",
+         "Median coherence of the 40–80 Hz coda versus inter-event separation, with 95 % cluster-bootstrap "
+         "intervals over events, for sensor A (a–c) and sensor B (d–f), in the windows S + 15 to S + 100 ms "
+         "(a, d), S + 40 to S + 100 ms (b, e) and S + 50 to S + 110 ms (c, f). Black: FORGE; dotted: FORGE "
+         "noise-only window (S + 550 to S + 610 ms); grey: smooth media (H, L, GRAD3, A); purple: 6-m layering and "
+         "fracture zones; orange: pink (σ = 0.09, 0.13); blue: exponential (*a* = 15 m); green: Gaussian "
+         "(*a* = 50 m), σ = 0.13. Symbols are offset horizontally for clarity.", F / "fig_d2_windows.png")
 d.h("Statistical comparison and the spectral family", 2)
 d.p(f"In the synthetic tests the statistical comparison selected the generating class in both controlled examples. "
     f"With the pink truth T1 the best medium was a pink medium with the true σ "
@@ -716,10 +736,11 @@ else:
     d.p(pend("family bootstrap / holdout (S20)"))
 d.figure("Statistical misfit Φ with event-bootstrap intervals and holdout scores",
          "a) Φ for all media with the full event set (circles) and 95 % event-bootstrap intervals (bars), sorted by "
-         "Φ. Grey: smooth media; purple: deterministic small-scale media; orange: pink; light orange: variable "
-         "*V*_{P}/*V*_{S}; blue: exponential (dark *a* = 15 m, light *a* = 50 m); green: Gaussian (dark *a* = 15 m, "
-         "light *a* = 50 m). The intervals reflect event resampling only, not realisation scatter. b) Held-out Φ of "
-         "each family's best training member over 21 splits in both directions.", F / "fig_phi_family.png")
+         "Φ. Labels give family, σ, *p* or *a* (m) and white-noise seed (s11, s33). Grey: smooth media; purple: "
+         "deterministic small-scale media; orange: pink; light orange: variable *V*_{P}/*V*_{S}; blue: exponential "
+         "(dark *a* = 15 m, light *a* = 50 m); green: Gaussian (dark *a* = 15 m, light *a* = 50 m). The intervals "
+         "reflect event resampling only, not realisation scatter. b) Held-out Φ of each family's best training member "
+         "over 21 splits in both directions (box: interquartile range; whiskers: range).", F / "fig_phi_family.png")
 d.h("Sonic-log spectrum", 2)
 d.p("Fig. 9 shows the log spectrum with four fitted spectral models. The spectrum is consistent with a power law "
     "over 12–200 m, but this range spans only 1.2 decades. Short-correlation-length spectra fit almost as well, "
@@ -727,8 +748,9 @@ d.p("Fig. 9 shows the log spectrum with four fitted spectral models. The spectru
     "family independently either.")
 d.figure("Spectral models of the 56-32 sonic-log fluctuations",
          "Multitaper power spectrum of detrended ln *V* (grey) and log-binned values (dots), with least-squares fits "
-         "of a power law, exponential and Gaussian autocorrelation spectra and a power law with a corner. a) 12–200 m; "
-         "the corner model converges to a pure power law and overlies it. b) 1–200 m. AIC values in the legend.",
+         "of a power law, exponential and Gaussian autocorrelation spectra and a power law with a corner (dashed). "
+         "a) 12–200 m; the corner model converges to a pure power law and overlies it. b) 1–200 m. AIC values in the "
+         "legend.",
          F / "fig_log_spectrum_uncertainty.png")
 
 # ================================================================= DISCUSSION
@@ -740,13 +762,17 @@ d.p("Media without structure below ~50 m (homogeneous, 50-m layering, smooth 3-D
     "two orders of magnitude less late S energy than recorded, event by event. This deficit survives "
     "non-overlapping windows, alternative source constraints, finite source duration, S-timing selection and a "
     "bounded single-resonance ringing model, and the simulated coda is converged with respect to grid and "
-    "absorbing boundary. Deterministic structure at the 5–10 m scale, either the logged layering at full "
-    "resolution or thin planar fracture zones, produces much of the missing energy, particularly at the deeper "
-    "sensor. Such structure keeps the coda of neighbouring events coherent, however, whereas the observed coda "
-    "decorrelates. Stochastic 3-D media reproduce both the level and the decorrelation. What remains true if the "
-    "term \"pink noise\" is removed from this paper is therefore: within elastic modelling, the late S energy and "
-    "its decorrelation in the 56-32 records require strong small-scale 3-D heterogeneity, unless an unmodelled "
-    "site or coupling response of comparable size is present.")
+    "absorbing boundary. The two simple deterministic media with structure at the 5–10 m scale that we tested, "
+    "the logged layering at full resolution and twelve thin planar fracture zones, produce much of the missing "
+    "energy, particularly at the deeper sensor. In the early coda such structure keeps neighbouring events "
+    "coherent, whereas the observed coda "
+    "decorrelates as in the stochastic media. In the pure late coda the planar fracture zones and the smooth media "
+    "remain too coherent, but the 6-m layering and the stochastic media both approach the noise-limited "
+    "coherence of the data. What remains true if the term \"pink noise\" is removed from this paper is "
+    "therefore: within elastic modelling, the late S energy in the 56-32 records requires structure at the "
+    "5–10 m scale, and its decorrelation favours distributed 3-D heterogeneity over smooth media and planar "
+    "fracture zones, without excluding fine layering, unless an unmodelled site or coupling response of "
+    "comparable size is present.")
 d.h("What the data do not show", 2)
 d.p("First, the waveforms do not identify the spectral family. At 20–80 Hz, power-law, exponential and Gaussian "
     "media reach comparable agreement once σ is adjusted, and the equal-σ truth tests do not separate pink from "
@@ -761,10 +787,11 @@ d.p(f"Second, σ_{{eff}} is not a unique measure of rock heterogeneity. It absor
     f"the late energy: density contrasts, anisotropic or fluid-filled fracture scattering, intrinsic attenuation "
     f"(which would reduce the coda and raise σ_{{eff}}), and site or coupling effects that the ringing test cannot "
     f"exclude. It also depends on the simulation domain. In the reference domain σ_{{eff}} = {se_txt}, depending on "
-    f"sensor and family. The domain test suggests that these values are about {fdom:.1f} times too large. In the "
+    f"sensor and family. One domain test (one medium, sensor B) suggests that these values may be about "
+    f"{fdom:.1f} times too large. In the "
     f"original analysis, the misfit optimum (σ ≈ 0.18) and the per-event optimum (σ ≈ 0.09–0.13) disagreed with "
     f"the sonic log ({K.log_sig6:.3f} at 6-m averaging) by up to a factor of four. With non-overlapping windows, all "
-    f"events, separate sensors and the domain effect, the discrepancy largely disappears. Adding the domain effect "
+    f"events, separate sensors and the domain effect, the discrepancy is much reduced. Adding the domain effect "
     f"to the pink medium with the log value (σ = 0.045) gives median ratios of {p1A:+.2f} (A) and {p1B:+.2f} (B), "
     f"within a factor of about {max(fac(p1A), 1/fac(p1B), fac(p1B), 1/fac(p1A)):.0f} at both sensors. This "
     f"agreement rests on one domain test at one sensor and should be read as consistency, not as a measurement.")
@@ -774,16 +801,19 @@ d.p("Third, the log and the wavefield sample different volumes: one vertical lin
     "stage-by-stage comparison is not possible, because 402 of the 416 events belong to stage 3 (the 14 stage-2 "
     "events show no significant difference; Additional file 1: Table S8). No pre-stimulation waveforms exist for "
     "these paths. The *V*_{S}-dominated medium shows only that a *V*_{S}-weighted perturbation would produce similar "
-    "late energy, and the fracture-zone medium shows that a few planar zones are not enough; neither shows that "
-    "stimulated fractures produced the coda.")
+    "late energy, and the fracture-zone medium shows that twelve planar zones are not enough; neither shows that "
+    "stimulated fractures produced the coda. Denser 3-D fracture networks, rough interfaces, irregular damage zones "
+    "and anisotropic compliance were not tested, and a sufficiently dense deterministic network would approach "
+    "a random medium.")
 d.h("Implications", 2)
 d.p("For microseismic practice, the result means that velocity models adequate for locating events at ~1-ms "
-    "travel-time precision leave most of the late wavefield unexplained, and that even fine deterministic layering "
-    "explains its level but not its spatial incoherence. The late wavefield carries information on small-scale 3-D "
+    "travel-time precision leave most of the late wavefield unexplained. Fine deterministic layering can supply much "
+    "of its level, and its spatial incoherence is matched best, though not uniquely, by distributed 3-D "
+    "heterogeneity. The late wavefield carries information on small-scale "
     "structure, but it must be compared statistically, because the realisation cannot be recovered from two "
-    "sensors. For the GFI concept, the result is necessary but not sufficient. Strong small-scale 3-D heterogeneity "
-    "is required, and a lognormal power-law medium with roughly the logged σ provides it. The present seismic data "
-    "do not, however, distinguish it from media with a short correlation length. Decisive tests of spectral shape "
+    "sensors. For the GFI concept, the result is consistent but not decisive. Strong small-scale heterogeneity is "
+    "required, and a lognormal power-law medium with roughly the logged σ provides it. The present seismic data "
+    "do not, however, distinguish it from media with a short correlation length, nor fully from fine layering. Decisive tests of spectral shape "
     "need records at more stations, measured sensor transfer functions, larger simulation domains, and "
     "simulations above 100 Hz, where the families differ most. The 4-kHz FORGE records contain S energy above noise "
     "up to about 1.8 kHz (Additional file 1: Figs. S5, S6), but fixed-frequency tool resonances near 330, 480 and "
@@ -801,6 +831,8 @@ d.bullets([
     f"σ_{{eff}} to about a factor of {np.exp(rspread/rslope):.1f} for pink and short-*a* media and much more for "
     f"large-*a* Gaussian media.",
     "The analysis band is 20–80 Hz, where the spectral families differ least.",
+    "In the pure late coda the inter-event coherence is limited by noise and does not separate fine layering "
+    "from distributed heterogeneity.",
 ])
 
 # ================================================================= CONCLUSIONS
@@ -810,11 +842,14 @@ d.bullets([
     f"S energy of {n_ev} FORGE MEQs by one to two orders of magnitude when the moment tensor is fitted to the "
     f"direct waves only. The deficit is robust to windows, source constraints, source duration, event timing and a "
     f"bounded in-band resonance, and the simulated coda is converged in grid and boundary.",
-    "Deterministic 5–10 m structure (6-m sonic-log layering, thin fracture zones) supplies much of the late energy, "
-    "but keeps the coda of neighbouring events coherent, whereas the observed coda decorrelates.",
-    f"Stochastic 3-D media reproduce both descriptors, with an effective scattering strength σ_{{eff}} = {se_txt} in "
-    f"the reference domain. A larger domain lowers this by a factor of about {fdom:.1f}, towards the sonic-log value "
-    f"of {K.log_sig6:.3f}.",
+    "The tested simple deterministic 5–10 m structures (6-m sonic-log layering, twelve thin fracture zones) supply "
+    "much of the late energy. In the early coda they keep neighbouring events more coherent than observed; in the "
+    "pure late coda, where coherence is limited by noise, only the smooth media and the fracture zones remain "
+    "distinguishable from the data.",
+    f"Stochastic 3-D media span the observed late energy and reproduce the loss of inter-event coherence more "
+    f"closely than the other tested media, with an effective scattering strength σ_{{eff}} = {se_txt} in the reference domain. In one sensor-B "
+    f"sensitivity test, enlarging the domain implied that these values may be overestimated by a factor of about "
+    f"{fdom:.1f}, which would bring them close to the sonic-log value of {K.log_sig6:.3f}.",
     "Within 20–80 Hz the waveforms do not distinguish power-law, exponential and Gaussian spectra; the sonic log is "
     "compatible with a power law but does not exclude a short correlation length.",
     "Deterministic comparison against unknown stochastic realisations favours smooth media, so medium-class "
@@ -823,26 +858,30 @@ d.bullets([
 
 # ================================================================= BACK MATTER
 d.h("Supplementary information", 1)
-d.p("Additional file 1: Figures S1–S12 and Tables S1–S16 (reciprocity validation, sonic log, earlier statistical "
-    "and shape tests, bandwidth and multi-octave diagnostics, window and moment-tensor sensitivity, S-timing "
-    "subsets, calibration bootstrap, source spectra, ringing tests, stage comparison, field statistics, numerical "
-    "convergence, σ_{eff} curves, complete Φ and holdout tables, equal-σ truth tests, log-spectrum variants and "
-    "per-event results for every medium and seed).")
+d.p("Additional file 1: Figures S1–S11 and Tables S1–S18 (reciprocity validation, sonic log, earlier statistical "
+    "tests, bandwidth and multi-octave diagnostics, location stress test of the coda coherence, window and "
+    "moment-tensor sensitivity, S-timing subsets, calibration bootstrap, source spectra, ringing tests, stage "
+    "comparison, field statistics, numerical convergence, σ_{eff} curves, complete Φ and holdout tables, equal-σ "
+    "truth tests, log-spectrum variants, per-event results for every medium and seed, and coda-coherence tables).")
 d.h("Availability of data and materials", 1)
-d.p("The GES 2022 catalogue is public [@dyer2022]. The 56-32 SEG-2 records were provided to the authors; their "
-    "public release is being confirmed with the data owner. All code (FD solver, reciprocity, features, tests; "
-    "random seeds are fixed in the scripts) and derived result tables are at "
-    "https://github.com/maswiet/Paper2_PinkNoise_WaveformInversion [COMMIT HASH AND ARCHIVE DOI TO BE ADDED AT "
-    "SUBMISSION].")
+d.p("The GES 2022 event catalogue is publicly available [@dyer2022]. The 2022 56-32 SEG-2 downhole records are "
+    "available from Utah FORGE and Geo-Energie Suisse on reasonable request. All code (FD solver, reciprocity, "
+    "feature extraction, tests and figure scripts, with fixed random seeds) and all derived result tables are "
+    "available at https://github.com/maswiet/Paper2_PinkNoise_WaveformInversion, release " + RELEASE + ".")
 d.h("Competing interests", 1)
-d.p("[TO BE COMPLETED BY AUTHORS]")
+d.p("The authors declare that they have no competing interests.")
 d.h("Funding", 1)
-d.p("[TO BE COMPLETED BY AUTHORS]")
+d.p("This research received no specific grant from any funding agency in the public, commercial or not-for-profit "
+    "sectors.")
 d.h("Authors' contributions", 1)
-d.p("[TO BE COMPLETED BY AUTHORS]")
+d.p("WS: conceptualisation, methodology, software, formal analysis, investigation, data curation, visualisation, "
+    "writing – original draft. PL: conceptualisation of the geoflow-imaging (GFI) framework and of the "
+    "pink-noise crustal model, methodology, writing – review and editing. Both authors read and approved the final "
+    "manuscript.")
 d.h("Acknowledgements", 1)
 d.p("We thank Heiner Igel for the acoustic finite-difference MATLAB codes from which the elastic solver used here "
-    "was developed. [FURTHER ACKNOWLEDGEMENTS TO BE COMPLETED BY AUTHORS]")
+    "was developed, Geo-Energie Suisse and the Utah FORGE project of the U.S. Department of Energy for the event "
+    "catalogue and the downhole records, and an internal reviewer for a critical reading of earlier versions.")
 
 REFS = {
     "aki1975": "Aki K, Chouet B. Origin of coda waves: source, attenuation, and scattering effects. J Geophys Res. 1975;80:3322–42.",

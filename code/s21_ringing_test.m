@@ -90,18 +90,20 @@ T3 = cell2table(rows, 'VariableNames', {'f_r_Hz','Q','A','peak_dB','log10_coda_S
 disp(T3); writetable(T3, fullfile(out,'table_null_ringing.csv'));
 fprintf('observed median log10(coda/S): A %.2f, B %.2f\n', log10(obsA), log10(obsB));
 % ---- figure ----
-f1 = figure('Position',[40 40 1400 430], 'Visible','off');
+f1 = figure('Visible','off');
 for g = 1:2
     subplot(1,3,g); semilogx(fl, 10*SP{g}, 'k', fl, 10*CP{g} - median(10*CP{g}(fl>30 & fl<150),'omitnan'), 'r', 'LineWidth', 1.2);
     xline([40 80], ':'); xline([330 480 920], 'Color', [0.6 0.6 0.6]); grid on; xlim([15 1800]);
-    xlabel('frequency (Hz)'); ylabel('dB'); legend('S spectrum (norm. 30-150 Hz)', 'coda/S ratio (norm.)', 'Location','southwest');
-    panel_label(gca, g, 'tr');
+    set(gca, 'XTick', [20 50 100 200 500 1000], 'XTickLabel', {'20','50','100','200','500','1000'});
+    xlabel('frequency (Hz)'); if g == 1, ylabel('relative level (dB)'); end
+    lg = legend('S spectrum', 'coda/S ratio', 'Location','southwest'); lg.Box = 'off';
+    panel_label(gca, g, 'tl'); set(gca, 'Position', [0.07 + 0.315*(g-1) 0.17 0.27 0.78]);
 end
 subplot(1,3,3); hold on
 for Q = [5 10 20 40]
-    s3 = T3(T3.Q == Q,:); plot(s3.f_r_Hz, s3.log10_coda_S_A, '-o', 'DisplayName', sprintf('A, Q = %d', Q));
+    s3 = T3(T3.Q == Q,:); plot(s3.f_r_Hz, s3.log10_coda_S_A, '-o', 'MarkerSize', 3, 'DisplayName', sprintf('H + resonance, Q = %d', Q));
 end
-yline(log10(obsA), 'k-', 'LineWidth', 2, 'DisplayName', 'FORGE A'); grid on; box on
-xlabel('resonance frequency f_r (Hz)'); ylabel('log_{10}(coda/S), homogeneous + resonance'); legend('Location','best');
-panel_label(gca, 3, 'tr');
-exportgraphics(f1, fullfile(here,'..','figs','fig_ringing_test.png'), 'Resolution', 140); close(f1);
+yline(log10(obsA), 'k-', 'LineWidth', 1.5, 'DisplayName', 'FORGE, sensor A'); grid on; box on
+xlabel('resonance frequency f_r (Hz)'); ylabel('log_{10}(coda/S)'); lg = legend('Location','east'); lg.Box = 'off';
+panel_label(gca, 3, 'tl'); set(gca, 'Position', [0.74 0.17 0.24 0.78]);
+pub_export(f1, fullfile(here,'..','figs','fig_ringing_test.png'), 17.4, 6.5, 7); close(f1);

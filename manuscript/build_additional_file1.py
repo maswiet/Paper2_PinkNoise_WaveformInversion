@@ -46,11 +46,11 @@ def pending_tab(title, what):
 
 
 f2 = lambda x: "—" if pd.isna(x) else f"{x:+.2f}"
-TITLE = ("Additional file 1 — Late S-wave energy in Utah FORGE downhole microearthquakes is not reproduced by smooth "
-         "elastic models: 3-D tests against stochastic small-scale heterogeneity")
+TITLE = ("Additional file 1 — Late S-wave energy and decorrelation in Utah FORGE downhole microearthquakes: elastic "
+         "tests of smooth, layered, fracture-zone and stochastic media")
 d.p(f"**{TITLE}**", align="center", size=13)
-d.p("Wiwit Suryanto, Peter Leary, [AUTHOR LIST TO BE CONFIRMED]", align="center")
-d.p("This file contains the diagnostics referred to in the main text. Figures S3, S4 and S10–S12 and Table S14 "
+d.p("Wiwit Suryanto (Universitas Gadjah Mada) and Peter Leary (Geoflow Imaging)", align="center")
+d.p("This file contains the diagnostics referred to in the main text. Figures S3, S4 and S11 and Table S14 "
     "come from the original analysis (fixed σ = 0.13 for the exponential and Gaussian media, 150 events); they are "
     "retained for completeness and are superseded in the main text by the per-event test on all events, the "
     "common-grid comparison and the cluster-bootstrap coherence analysis.")
@@ -97,15 +97,11 @@ fig(F / "fig_break_test.png",
     "slopes. b) Curvature of Q_{c}^{-1} versus correlation length. c) Coda level at 100 Hz versus correlation "
     "length; black line: FORGE. Grid, domain, sensor and event subset change together between the two octaves, "
     "so the comparison is not a pure frequency effect.")
-fig(F / "fig_shape_data.png",
-    "Original D1 (coda level at 40–80 Hz minus 20–40 Hz, sensor A) and D2 (median coda coherence versus separation) "
-    "without uncertainty; superseded by main-text Fig. 7.")
+fig(F / "fig_d2_perturb.png",
+    "Location stress test of the inter-event coda coherence (window S + 40 to S + 100 ms): binned medians after perturbing the hypocentres used for binning by isotropic Gaussian errors of 5 m (solid), 20 m (dashed) and 50 m (dotted), for FORGE (black, thick) and the media (colours as in main-text Fig. 7). a) Sensor A. b) Sensor B. Large errors flatten the curves of data and media alike; the levels at ≥ 20 m separation are preserved.")
 fig(F / "fig_log_vs_media.png",
     "Vertical fluctuation spectra of the 56-32 sonic log (black) and of the model media over 12–200 m, normalised at "
     "50 m. The rms log difference in the legend is a descriptive distance, not a likelihood.")
-fig(F / "fig_sigma_p_map.png",
-    "Original Φ over the pink-family parameters (σ, *p*) for FORGE; mean and range where several realisations "
-    "exist. σ = 0.22 and 0.25 have fewer than five grid points per minimum S wavelength at 80 Hz.")
 
 # ================================================================= TABLES
 d.h("Supplementary tables", 1)
@@ -285,6 +281,31 @@ tab("Per-event coda test for every medium and seed", ["Medium", f"Median A/B (al
     rows, [4.4, 3.0, 2.6, 1.4, 3.6], size=7,
     legend="Primary windows (fit P − 10 ms to S + 15 ms; coda S + 40 to S + 100 ms). Common-grid media are named "
            "X_<family>_<σ>_<p or a>_<seed>.")
+DA = rd("table_d2_allpairs.csv")
+if DA is not None:
+    rows = [[r.model, r.window.replace("-", "–"), r.sensor, f"{r.median_coh_all:.3f}", f"[{r.lo95:.3f}, {r.hi95:.3f}]",
+             int(r.n_pairs)] for r in DA.itertuples()]
+    tab("Inter-event coda coherence over all pairs within 160 m, by window",
+        ["Medium", "Window", "Sensor", "Median coherence", "95 % interval", "Pairs"], rows, [4.2, 3.0, 1.4, 2.6, 3.4, 1.6],
+        size=7, legend="Cluster-bootstrap intervals over events (500 resamples). Pairs subsampled to 20 000 where more "
+                       "exist. The noise window (S + 550 to S + 610 ms) contains no coda and gives the coherence of "
+                       "noise alone; every synthetic record contains its event's own recorded noise.")
+DP = rd("table_d2_perturb.csv")
+if DP is not None:
+    rows = []
+    for (m, w, g), x in DP.groupby(["model", "window", "sensor"], sort=False):
+        if m not in ("data", "H", "L6", "FZ", "P6", "E15", "G50"):
+            continue
+        r = [m, w.replace("-", "–"), g]
+        for sp in (5, 20, 50):
+            y = x[(x.perturb_m == sp) & (x.d_lo_m >= 20)].median_coh.values
+            r.append(" / ".join(f"{v:.2f}" for v in y))
+        rows.append(r)
+    tab("Location stress test: binned coherence (20–40, 40–80, 80–160 m) after hypocentre perturbation",
+        ["Medium", "Window", "Sensor", "σ_{loc} = 5 m", "σ_{loc} = 20 m", "σ_{loc} = 50 m"], rows,
+        [1.8, 2.6, 1.3, 3.4, 3.4, 3.4], size=7,
+        legend="Mean over 50 perturbation draws of the median coherence in the bins 20–40, 40–80 and 80–160 m; "
+               "perturbations applied identically to data and media.")
 print(f"figures S1-S{FIGN[0]}, tables S1-S{TABN[0]}")
 print("PENDING:", sorted(set(PENDING)))
 d.save(P / "manuscript" / "Paper2_Additional_file_1.docx")

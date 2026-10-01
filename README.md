@@ -1,4 +1,4 @@
-# Paper 2 — Utah FORGE downhole MEQ codas and small-scale 3-D heterogeneity: 3-D elastic tests of smooth, layered, fracture-zone and stochastic media
+# Paper 2 — Late S-wave energy and decorrelation in Utah FORGE downhole microearthquakes: elastic tests of smooth, layered, fracture-zone and stochastic media
 
 Follow-up to Paper 1 (`../abg_framework_2026`). Tests the GFI concept (Leary, *Matlab Tools for ID Geothermal
 System Flow Analysis*, Web Session 4): crustal properties are spatially correlated **pink-noise** fields
@@ -52,6 +52,18 @@ the energy but keep the coda of neighbouring events coherent (D2), unlike the da
 upper bounds (÷ ~1.7, i.e. ~0.03–0.08 vs sonic log 0.045). Grid (2.5 m) and sponge changes are small (+0.01, +0.13).
 The 20–80 Hz data do not select a spectral family (seed scatter in Φ up to 0.33 > family differences).
 Corrected errors: window overlap; MT residual/overlay shift sign (VR and coda ratios unaffected); FD interior size.
+
+## Final revision (second internal review, 2026-10-01) — release `v1.0-submission`
+- D2 (inter-event coda coherence) recomputed in the pure late-coda windows S+40–100 and S+50–110 ms
+  (`s11_shape_diagnostics(name,'forge',win)`, `run_d2_windows.m`, `s31_d2_windows.m`), with a noise-only reference
+  window (S+550–610 ms), all-pairs medians and a location stress test of 5–50 m applied to data and media alike
+  (`fig_d2_perturb.m`). Result: in the late coda all media approach the noise-limited coherence; smooth media and planar
+  fracture zones stay more coherent than the data (19 of 20 cases), the 6-m layering and stochastic media come closest.
+  The claim is therefore "structure at 5–10 m is required; decorrelation favours distributed 3-D heterogeneity without
+  excluding fine layering".
+- Main figures redrawn at print size (17.4 cm, 7–9 pt, 300 dpi PNG + vector PDF) via `pub_export.m`;
+  new geometry figure `fig_geometry_rev.m`.
+- Authors: Wiwit Suryanto (UGM) and Peter Leary (Geoflow Imaging).
 
 ## Pipeline (MATLAB R2025b/R2026b, run from `code/`)
 | step | script | output |

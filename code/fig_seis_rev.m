@@ -14,7 +14,7 @@ td = (0:size(ev.W,1)-1)'/ev.fs - ev.pre; hch = {[2 3],[5 6]};
 [~, ie] = ismember(S19.ev, G.ev); RA = S19.R(:,1);
 [~, o] = sort(RA); pick = o(round([0.2 0.5 0.8]*numel(o)));
 L = load(fullfile(here,'..','data','sensor_rotation.mat')); ROT = L.ROT; basis = mt_basis();
-f1 = figure('Position',[30 30 1650 820], 'Visible','off'); np = 0;
+f1 = figure('Visible','off'); np = 0;
 for r = 1:3
     i = pick(r); k = ie(i);
     obs = zeros(G.nt, 4);
@@ -37,13 +37,13 @@ for r = 1:3
         np = np + 1; subplot(3, numel(models), np); hold on
         patch(([tP(1)-0.010 tS(1)+0.015 tS(1)+0.015 tP(1)-0.010]) - tP(1), [-1.3 -1.3 1.3 1.3], [0.85 0.92 1], 'EdgeColor','none');
         patch(([tS(1)+0.040 tS(1)+0.100 tS(1)+0.100 tS(1)+0.040]) - tP(1), [-1.3 -1.3 1.3 1.3], [0.9 0.9 0.9], 'EdgeColor','none');
-        plot(t - tP(1), o1/sc, 'k', 'LineWidth', 0.8); plot(t - tP(1), p1/sc, 'r', 'LineWidth', 0.8);
+        plot(t - tP(1), o1/sc, 'k', 'LineWidth', 0.6); plot(t - tP(1), p1/sc, 'r', 'LineWidth', 0.6);
         xline(tS(1)-tP(1), ':'); xlim([-0.02 tS(1)-tP(1)+0.13]); ylim([-1.3 1.3]); box on
-        if q == 1, ylabel(sprintf('R = %.0f m', S19.R(i,1))); end
+        if q == 1, ylabel(sprintf('R = %.0f m', S19.R(i,1))); else, set(gca, 'YTickLabel', []); end
         if r == 3, xlabel('time after P (s)'); end
-        text(0.98, 0.93, sprintf('VR %.2f', Rf.full.vr), 'Units','normalized', 'HorizontalAlignment','right', 'FontSize', 8);
+        text(0.98, 0.95, sprintf('VR %.2f', Rf.full.vr), 'Units','normalized', 'HorizontalAlignment','right', 'VerticalAlignment','top', 'FontSize', 7, 'BackgroundColor','w', 'Margin', 0.5);
         panel_label(gca, np);
     end
 end
-exportgraphics(f1, fullfile(here,'..','figs','fig_seis_rev.png'), 'Resolution', 140); close(f1);
+pub_export(f1, fullfile(here,'..','figs','fig_seis_rev.png'), 17.4, 12, 7); close(f1);
 end

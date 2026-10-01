@@ -100,11 +100,12 @@ models = {
     "power law with corner": (lambda q, k: q[0] - q[1] / 2 * np.log1p((2 * np.pi * k * np.exp(q[2])) ** 2), [0.0, 1.0, np.log(50.0)]),
 }
 mrows = []
-fig, ax = plt.subplots(1, 2, figsize=(12, 4.6))
+plt.rcParams.update({"font.size": 8, "font.family": "Arial", "axes.linewidth": 0.6})
+fig, ax = plt.subplots(1, 2, figsize=(17.4 / 2.54, 7.0 / 2.54))
 for ib, (lo, hi) in enumerate(((12, 200), (1, 200))):
     fc, pc = logbin(f, p, lo, hi)
     yv = np.log(pc); n = len(yv)
-    ax[ib].loglog(f, p, color="0.8", lw=0.6); ax[ib].loglog(fc, pc, "ko", ms=4, label="binned log PSD")
+    ax[ib].loglog(f, p, color="0.8", lw=0.5); ax[ib].loglog(fc, pc, "ko", ms=2.5, label="binned log PSD")
     for name, (fun, q0) in models.items():
         r = least_squares(lambda q: fun(q, fc) - yv, q0)
         rss = np.sum(r.fun ** 2); kpar = len(q0)
@@ -117,17 +118,18 @@ for ib, (lo, hi) in enumerate(((12, 200), (1, 200))):
         mrows.append(dict(band=f"{lo}-{hi} m", model=name, n_bins=n, rms_log=np.sqrt(rss / n), AIC=aic,
                           params=np.array2string(r.x, precision=3), note=extra))
         kk = np.logspace(np.log10(1 / hi), np.log10(1 / lo), 100)
-        ax[ib].loglog(kk, np.exp(fun(r.x, kk)), lw=1.3, label=f"{name} (AIC {aic:.1f})")
+        ax[ib].loglog(kk, np.exp(fun(r.x, kk)), lw=1.0, ls=("--" if name == "power law with corner" else "-"), label=f"{name} (AIC {aic:.1f})")
     ax[ib].set_xlim(1 / hi * 0.8, 1 / lo * 1.2); ax[ib].set_xlabel("vertical wavenumber (cycles/m)")
-    ax[ib].set_ylabel("PSD of ln V"); ax[ib].legend(fontsize=7, loc="lower left"); ax[ib].grid(True, which="both", alpha=0.3)
-    ax[ib].text(0.97, 0.95, "ab"[ib] + ")", transform=ax[ib].transAxes, ha="right", va="top", fontweight="bold",
+    ax[ib].set_ylabel("PSD of ln V"); ax[ib].legend(fontsize=6, loc="lower left", frameon=False); ax[ib].grid(True, which="both", alpha=0.3, lw=0.4)
+    ax[ib].text(0.97, 0.95, "ab"[ib] + ")", transform=ax[ib].transAxes, ha="right", va="top", fontweight="bold", fontsize=9,
                 bbox=dict(facecolor="w", edgecolor="none", pad=1))
 M = pd.DataFrame(mrows)
 for b in M.band.unique():
     M.loc[M.band == b, "dAIC"] = M.loc[M.band == b, "AIC"] - M.loc[M.band == b, "AIC"].min()
 M.to_csv(ROOT / "results" / "table_log_spectral_models.csv", index=False)
 print(M.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
-fig.tight_layout(); fig.savefig(ROOT / "figs" / "fig_log_spectrum_uncertainty.png", dpi=150)
+fig.tight_layout(); fig.savefig(ROOT / "figs" / "fig_log_spectrum_uncertainty.png", dpi=300)
+fig.savefig(ROOT / "figs" / "fig_log_spectrum_uncertainty.pdf")
 pd.DataFrame([dict(beta_ref=slope(f, p, 12, 200), beta_se_jackknife=se_jk,
                    beta_min=T.beta_12_200.min(), beta_max=T.beta_12_200.max())]).to_csv(
     ROOT / "results" / "table_log_slope_summary.csv", index=False)

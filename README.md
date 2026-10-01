@@ -53,6 +53,15 @@ upper bounds (÷ ~1.7, i.e. ~0.03–0.08 vs sonic log 0.045). Grid (2.5 m) and s
 The 20–80 Hz data do not select a spectral family (seed scatter in Φ up to 0.33 > family differences).
 Corrected errors: window overlap; MT residual/overlay shift sign (VR and coda ratios unaffected); FD interior size.
 
+## GJI version (2026-10-01)
+Target journal: *Geophysical Journal International*. Builders: `manuscript/build_paper2_gji.py` (main text, GJI
+style: SUMMARY, numbered upper-case headings, author–year citations from `manuscript/refs_gji.py`, equations as
+numbered paragraphs, Data availability / Acknowledgements / Supporting information) and
+`manuscript/build_supporting_gji.py` (Supporting Information, Figures S1–S11, Tables S1–S18); helper
+`manuscript/gji_doc.py`. Outputs: `Paper2_GJI.docx/.pdf` (text + captions), `Paper2_GJI_review.docx/.pdf` (figures
+embedded), `Paper2_GJI_Supporting_Information.docx/.pdf`. Title: "Late S-wave coda of Utah FORGE downhole
+microearthquakes: elastic tests of smooth, deterministic and stochastic media".
+
 ## Final revision (second internal review, 2026-10-01) — release `v1.0-submission`
 - D2 (inter-event coda coherence) recomputed in the pure late-coda windows S+40–100 and S+50–110 ms
   (`s11_shape_diagnostics(name,'forge',win)`, `run_d2_windows.m`, `s31_d2_windows.m`), with a noise-only reference

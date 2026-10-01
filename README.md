@@ -1,4 +1,4 @@
-# Paper 2 — Pink-noise crust vs conventional crustal models: 3D elastic synthetics and Utah FORGE MEQ waveforms
+# Paper 2 — Utah FORGE downhole MEQ codas and small-scale 3-D heterogeneity: 3-D elastic tests of smooth, layered, fracture-zone and stochastic media
 
 Follow-up to Paper 1 (`../abg_framework_2026`). Tests the GFI concept (Leary, *Matlab Tools for ID Geothermal
 System Flow Analysis*, Web Session 4): crustal properties are spatially correlated **pink-noise** fields
@@ -13,11 +13,47 @@ stages 1–3) microearthquake waveforms recorded in monitoring well 56-32.
   (~75 MB per model; regenerate with `run_sgt(<model>)` / `run_sgt_hf(<model>)`), the extracted FORGE 2022 56-32
   waveforms `data/` (regenerate from the GES SEG-2 files with `s01_extract_forge_events.m`), intermediate
   `results/*.mat` and run logs.
-- Requirements: MATLAB R2025b (Signal Processing, Statistics toolboxes); Python 3.12 with `python-docx`, `pandas`,
+- Requirements: MATLAB R2025b/R2026b (Signal Processing, Statistics toolboxes); Python 3.12 with `python-docx`, `pandas`,
   `lxml`, `latex2mathml`; Microsoft Word (for `MML2OMML.XSL`, used by `manuscript/springer_doc.py`, and for PDF export).
 - The FD solver builds on Igel, Mora & Riollet (1995) and H. Igel's acoustic FD MATLAB codes (Igel 2016).
 
-## Pipeline (MATLAB R2025b, run from `code/`)
+## Revision after internal review (2026-10-01) — CURRENT STATE
+The sections further below document the original analysis and are partly superseded (window overlap, 150-event
+subset, σ interpretation, "pink crust" framing).
+
+**Documents** (`manuscript/`, Python 3.12): `build_paper2_rev.py` → `Paper2_revised.docx` (EMBED=1 →
+`Paper2_revised_review.docx/.pdf`) and `build_additional_file1.py` → `Paper2_Additional_file_1.docx/.pdf`. All numbers are read from `results/*.csv`.
+
+**New simulations** (`queue_revision.sh`, horizontal forces only): smooth 3-D gradients `GRAD3`, 6-m sonic-log
+layering `L6`, 12 planar fracture zones `FZ`, variable Vp/Vs `VSD`/`VSO`, and a common family grid
+`X_<pink|exp|gau>_<σ>_<p|a>_<seed>` (σ 0.09/0.13/0.18 × 2 shapes × seeds 11/33); convergence cases
+`run_convergence('C5'|'C25'|'CBIG'|'CSP')` (5 m, 2.5 m, domain +150 m, sponge 40). Post-processing: `post_revision.m`.
+
+| script | purpose | output |
+|---|---|---|
+| `s19_coda_prediction.m`, `mt_fit_variants.m`, `s27_summarise_s19.m` | per-event late-energy test, non-overlapping windows (fit P−10…S+15 ms, coda S+40…100 ms), all 416 two-sensor events, full/dev/DC MT, window grid | `table_coda_prediction.csv`, `table_coda_window_sensitivity.csv`, `table_mt_variants.csv` |
+| `s20_family_inference.m` | Φ (explicit weights) with event bootstrap, family best member, holdout | `table_phi_bootstrap.csv`, `table_family_bootstrap.csv`, `table_holdout*.csv` |
+| `s21_ringing_test.m` | in-band spectral smoothness, null-ringing test | `table_ringing_prominence.csv`, `table_null_ringing.csv` |
+| `s22_calib_bootstrap.m` | sensor calibration bootstrap + leave-one-stage-out | `table_calib_*.csv` |
+| `s23_source_spectra.m` | apparent corners, Brune source-duration sensitivity | `table_source_*.csv` |
+| `s24_stage_and_fields.m` | stage comparison, field statistics after truncation | `table_stage_coda.csv`, `table_field_stats.csv` |
+| `s25_d2_uncertainty.m` | D2 cluster bootstrap + location perturbation | `table_d2_uncertainty.csv` |
+| `s26_convergence.m` | coda convergence (grid, domain, sponge) | `table_convergence.csv` |
+| `s28_s_timing_check.m` | S-timing check, well-timed subsets | `table_s_timing_subsets.csv` |
+| `s29_sigma_eff.m` | σ_eff per family/sensor | `table_sigma_eff.csv`, `table_sigma_curves.csv` |
+| `s30_selection_table.m` | event-selection flow (800 → 555 → 416 → 150) | `table_event_selection.csv` |
+| `s18_log_spectrum_uncertainty.py` | sonic-log slope variants, spectral-model AIC | `table_log_*.csv` |
+
+**Key revised results** (median log10 predicted/observed late energy, sensor A/B, 416 events):
+smooth H -1.80/-1.09, L -1.64/-1.17, GRAD3 -1.67/-1.11, VTI -1.91/-1.19; deterministic small-scale L6 -1.28/-0.53, FZ -1.04/-0.39;
+pink σ .045 -0.74/+0.02, σ .09 -0.14/+0.53, σ .13 +0.31/+0.78. Smooth media under-predict by ×12–82; L6/FZ supply much of
+the energy but keep the coda of neighbouring events coherent (D2), unlike the data; stochastic media reproduce both.
+σ_eff (reference domain) 0.05–0.13 by family/sensor; the domain test (+0.40 log units for a +150 m domain) makes these
+upper bounds (÷ ~1.7, i.e. ~0.03–0.08 vs sonic log 0.045). Grid (2.5 m) and sponge changes are small (+0.01, +0.13).
+The 20–80 Hz data do not select a spectral family (seed scatter in Φ up to 0.33 > family differences).
+Corrected errors: window overlap; MT residual/overlay shift sign (VR and coda ratios unaffected); FD interior size.
+
+## Pipeline (MATLAB R2025b/R2026b, run from `code/`)
 | step | script | output |
 |---|---|---|
 | FD solver | `fd3d_elastic_vti.m` — velocity–stress staggered grid O(2,4), VTI (Thomsen), moment-tensor or point-force source, strain-rate recording | — |

@@ -73,6 +73,7 @@ for g = 1:2
     end
     d = D(sub2ind(size(D), ii, jj));
     Z.pairs{g} = [d c];
+    Z.pairidx{g} = [REC(g).k(idx(ii)) REC(g).k(idx(jj))];   % catalogue event ids of each pair
     for e = 1:numel(edges)-1
         m = d > edges(e) & d <= edges(e+1);
         Z.npair(g,e) = nnz(m);

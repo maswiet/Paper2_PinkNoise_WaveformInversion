@@ -96,8 +96,12 @@ class SDoc:
     # ------------------------------------------------------------------ text
     TOK = re.compile(r"(\$[^$]+\$|\*\*[^*]+\*\*|(?<![A-Za-z0-9])\*[^*\s][^*]*\*|_\{[^}]+\}|\^\{[^}]+\})")
 
+    # hyphen used as a sign before a number -> minus sign (not after a word character, ')' or en dash,
+    # so "56-32", "16A(78)-32" and "5-m" are left alone)
+    MINUS = re.compile(r"(?<![\w\)–])-(?=\d)")
+
     def runs(self, p, text, size=None, bold=False, italic=False):
-        text = self.cite(text)
+        text = self.MINUS.sub("−", self.cite(text))
         for tk in self.TOK.split(text):
             if not tk:
                 continue

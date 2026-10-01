@@ -43,12 +43,55 @@ switch name
         f = max(min(f, 3), -3);
         M = build_model('homog', struct('vp',vp,'vs',vs), g);
         M.vp = vp*exp(0.13*f); M.vs = vs*exp(0.13*f);
+    case 'L6'     % layered: full-resolution 56-32 log (6-m average) sampled on the 5-m grid (revision)
+        d6 = interp1(L.z, L.d6, zg, 'linear', 'extrap'); d6 = reshape(single(d6 - mean(d6)),1,1,[]);
+        M = build_model('homog', struct('vp',vp,'vs',vs), g);
+        M.vp = M.vp.*exp(d6); M.vs = M.vs.*exp(d6);
+    case 'GRAD3'  % smooth 3-D gradients: +-3 % vertical, +-2 % in E and N across the box (revision)
+        [x, y, z] = ndgrid(linspace(-1,1,G.n(1)), linspace(-1,1,G.n(2)), linspace(-1,1,G.n(3)));
+        fz = single(1 + 0.03*z + 0.02*x - 0.02*y);
+        M = build_model('homog', struct('vp',vp,'vs',vs), g); M.vp = M.vp.*fz; M.vs = M.vs.*fz;
+    case 'FZ'     % deterministic fracture zones through the event volume (revision):
+        % 12 planar zones, strike N25E, dip 75 deg, one cell thick, Vp -10 %, Vs -20 %
+        M = build_model('homog', struct('vp',vp,'vs',vs), g);
+        [ix, iy, iz] = ndgrid(1:G.n(1), 1:G.n(2), 1:G.n(3));
+        X = G.x0(1) + (ix-1)*G.dx; Y = G.x0(2) + (iy-1)*G.dx; Z3 = G.x0(3) + (iz-1)*G.dx;
+        stk = deg2rad(25); dp = deg2rad(75);
+        nrm = [cos(stk)*sin(dp), -sin(stk)*sin(dp), cos(dp)];   % normal of plane striking N25E, dipping 75 deg
+        rng(11); c0 = [900 -400 2300] + rand(12,3).*[220 400 350];
+        for q = 1:12
+            dist = abs((X - c0(q,1))*nrm(1) + (Y - c0(q,2))*nrm(2) + (Z3 - c0(q,3))*nrm(3));
+            in = dist <= G.dx/2 & abs(Z3 - c0(q,3)) < 120;         % ~240-m tall zones
+            M.vp(in) = 0.90*vp; M.vs(in) = 0.80*vs;
+        end
+    case 'VSD'    % pink sigma .13 p 1.5, independent Vp and Vs fields (Vp/Vs varies in space) (revision)
+        P = struct('vp',vp,'vs',vs,'sig',0.13,'p',1.5,'seed',11,'clip',3,'vpvs_coupled',false);
+        M = build_model('pink', P, g);
+        M.vs = max(min(M.vs, vs*exp(0.39)), vs*exp(-0.39));   % same truncation as Vp
+    case 'VSO'    % pink, Vs-dominant: sigma_Vs .13, sigma_Vp .065, same field (revision)
+        f = single(pinknoise3d(G.n, 1.5, 11)); f = max(min(f, 3), -3);
+        M = build_model('homog', struct('vp',vp,'vs',vs), g);
+        M.vp = vp*exp(0.065*f); M.vs = vs*exp(0.13*f);
     case 'T2'     % null-test truth: log layering + VTI (eps .06, del .03, gam .06)
         M = build_model('homog', struct('vp',vp,'vs',vs), g);
         M.vp = M.vp.*exp(dl); M.vs = M.vs.*exp(dl);
         M.eps = 0.06; M.del = 0.03; M.gam = 0.06;
     otherwise
-        error('unknown model %s', name);
+        if startsWith(name, 'X_')   % fair family grid (revision): X_<pink|exp|gau>_<sigma>_<p or a>_<seed>
+            t = strsplit(name, '_'); fam = t{2}; sg = str2double(t{3}); pr = str2double(t{4}); sd = str2double(t{5});
+            clip = 3; if sg > 0.15, clip = 2.5; end
+            switch fam
+                case 'pink', f = single(pinknoise3d(G.n, pr, sd));
+                case 'exp',  f = single(randmedium3d(G.n, G.dx, 'exp', pr, sd));
+                case 'gau',  f = single(randmedium3d(G.n, G.dx, 'gauss', pr, sd));
+                otherwise, error('unknown family %s', fam);
+            end
+            f = max(min(f, clip), -clip);
+            M = build_model('homog', struct('vp',vp,'vs',vs), g);
+            M.vp = vp*exp(sg*f); M.vs = vs*exp(sg*f);
+        else
+            error('unknown model %s', name);
+        end
 end
 M.rho = G.rho;
 info = sprintf('%s: vp %.0f-%.0f, vs %.0f-%.0f, eps %.3f del %.3f gam %.3f', name, ...
